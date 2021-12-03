@@ -270,6 +270,7 @@ function init() {
   var sphere = getSphere(2)
   var plane = getPlane(100)
   var car = createCar()
+  var cone = getCone(20, 20, 20)
   var camera = new THREE.PerspectiveCamera(
     45,
     window.innerWidth / window.innerHeight,
@@ -289,7 +290,7 @@ function init() {
   }
 
   // Add box as child of plane, add plane to scene
-  scene.add(box)
+  scene.add(cone)
   directionalLight.add(sphere)
   scene.add(directionalLight)
   scene.add(plane)
@@ -301,7 +302,7 @@ function init() {
   // Camera properties
 
   // GUI
-  displayGUI(directionalLight, box)
+  displayGUI(directionalLight, cone)
 
   // Camera position
 
