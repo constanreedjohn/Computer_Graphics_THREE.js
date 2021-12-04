@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { AmbientLightProbe } from 'three'
+// import { LightShadow } from 'three'
 
 function getBox(h, w, d) {
   var geometry = new THREE.BoxGeometry(h, w, d)
@@ -140,7 +142,7 @@ function getPlane(size) {
 }
 
 function getPointLight(intensity) {
-  var light = new THREE.PointlLight(0xffffff, intensity, 100)
+  var light = new THREE.PointLight(0xffffff, intensity, 100)
   light.castShadow = true
 
   return light
@@ -211,7 +213,9 @@ function update(renderer, scene, camera, controls) {
 function displayGUI(scene, light, params, objects) {
   var gui = new dat.GUI()
   var object = objects[params.obj.geo]
+  var lgt = light[params.light.type]
 
+  // Object selection
   const objFolder = gui.addFolder('Object')
 
   const objColor = {
@@ -226,6 +230,8 @@ function displayGUI(scene, light, params, objects) {
       object = objects[params.obj.geo]
       scene.add(object)
     })
+  
+  // Object Color
   objFolder
     .addColor(objColor, 'color')
     .name('Color')
@@ -233,24 +239,64 @@ function displayGUI(scene, light, params, objects) {
       object.material.color.set(objColor.color)
     })
 
-  const posFolder = gui.addFolder('Position')
+  // Object position
+  const posFolder = objFolder.addFolder('Position')
 
-  posFolder.add(object.position, 'x', -100, 100).name('X-axis')
-  posFolder.add(object.position, 'y', -100, 100).name('Y-axis')
-  posFolder.add(object.position, 'z', -100, 100).name('Z-axis')
+  posFolder
+    .add(params.obj.pos, 'x', -100, 100)
+    .name('X-axis')
+    .onChange(() => {
+      object.position.x = params.obj.pos.x 
+    })
+  posFolder
+    .add(params.obj.pos, 'y', -100, 100)
+    .name('Y-axis')
+    .onChange(() => {
+      object.position.y = params.obj.pos.y 
+    })
+  posFolder
+    .add(params.obj.pos, 'z', -100, 100)
+    .name('Z-axis')
+    .onChange(() => {
+      object.position.z = params.obj.pos.z 
+    })
 
-  const rotFolder = gui.addFolder('Rotation')
+  // Object Rotation
+  const rotFolder = objFolder.addFolder('Rotation')
 
-  rotFolder.add(object.rotation, 'x', 0, Math.PI * 2).name('X-axis')
-  rotFolder.add(object.rotation, 'y', 0, Math.PI * 2).name('Y-axis')
-  rotFolder.add(object.rotation, 'z', 0, Math.PI * 2).name('Z-axis')
+  rotFolder
+    .add(params.obj.rot, 'x', -Math.PI, Math.PI)
+    .name('X-axis')
+    .onChange(() => {
+      object.rotation.x = params.obj.rot.x 
+    })
+  rotFolder
+    .add(params.obj.rot, 'y', -Math.PI, Math.PI)
+    .name('Y-axis')
+    .onChange(() => {
+      object.rotation.y = params.obj.rot.y 
+    })
+  rotFolder
+    .add(params.obj.rot, 'z', -Math.PI, Math.PI)
+    .name('Z-axis')
+    .onChange(() => {
+      object.rotation.z = params.obj.rot.z 
+    })
 
+  // Light selection
   const lightFolder = gui.addFolder('Light')
 
-  lightFolder.add(light, 'intensity').min(0).max(10).name('Intensity')
-  lightFolder.add(light.position, 'x').min(-100).max(100).name('X-axis')
-  lightFolder.add(light.position, 'y').min(-100).max(100).name('Y-axis')
-  lightFolder.add(light.position, 'z').min(-100).max(100).name('Z-axis')
+  lightFolder.add(params.light, 'type', ['Directional', 'Spot', 'Point', 'Ambient'])
+  .name('Light Types')
+  .onChange(() => {
+    var lightHelper = getSphere(1, (lightHelper = true))
+    scene.remove(lgt)
+    lgt = light[params.light.type]
+    lgt.add(lightHelper)
+    scene.add(lgt)
+  })
+
+  // Light color
   const lightColor = {
     color: 0xffffff,
   }
@@ -258,8 +304,34 @@ function displayGUI(scene, light, params, objects) {
     .addColor(lightColor, 'color')
     .name('Light Color')
     .onChange(() => {
-      light.color.set(lightColor.color)
+      lgt.color.set(lightColor.color)
     })
+
+  // Light Intensity
+  lightFolder.add(params.light, 'intens', 0, 10)
+  .name('Intensity')
+  .onChange(() => {
+    lgt.intensity = params.light.intens
+  })
+  
+  // Light Position
+
+  const posLight = lightFolder.addFolder('Position')
+  posLight.add(params.light.pos, 'x', -100, 100)
+  .name('X-axis')
+  .onChange(() => {
+    lgt.position.x = params.light.pos.x
+  })
+  posLight.add(params.light.pos, 'y', -100, 100)
+  .name('Y-axis')
+  .onChange(() => {
+    lgt.position.y = params.light.pos.y
+  })
+  posLight.add(params.light.pos, 'z', -100, 100)
+  .name('Z-axis')
+  .onChange(() => {
+    lgt.position.z = params.light.pos.z
+  })
 
   gui.open()
   return { scene, light, object }
@@ -283,18 +355,17 @@ function init() {
   var renderer = new THREE.WebGLRenderer()
   var controls = new OrbitControls(camera, renderer.domElement)
   var enableFog = false
-  var lightHelper = getSphere(1, (lightHelper = true))
-  var directionalLight = getDirectionalLight(1)
   var ambientLight = getAmbientLight(1)
+  var spotLight = getSpotLight(1)
+  var pointLight = getPointLight(1)
+  var directionalLight = getDirectionalLight(1)
 
   // Add white fog
   if (enableFog) {
     scene.fog = new THREE.FogExp2(0xffffff, 0.1)
   }
 
-  // Add box as child of plane, add plane to scene
-  directionalLight.add(lightHelper)
-  scene.add(directionalLight)
+  // Add stuff to scene
   scene.add(ambientLight)
   scene.add(plane)
 
@@ -308,13 +379,12 @@ function init() {
   // Light properties
   directionalLight.position.y = 20
   directionalLight.position.x = -10
+  pointLight.position.y = 20
+  pointLight.position.x = -10
+  spotLight.position.y = 20
+  spotLight.position.x = -10
 
   // Config to change objects
-  var params = {
-    obj: {
-      geo: 'Box',
-    },
-  }
   var objects = {
     Box: box,
     Sphere: sphere,
@@ -323,13 +393,46 @@ function init() {
     Car: car,
   }
 
+  var lights = {
+    Directional: directionalLight,
+    Spot: spotLight,
+    Point: pointLight,
+    Ambient: ambientLight
+  }
+
+  var params = {
+    obj: {
+      geo: 'Cone',
+      pos: {
+        x: 0,
+        y: 0,
+        z: 0 
+      },
+      rot: {
+        x: 0,
+        y: 0,
+        z: 0
+      }
+    },
+    light: {
+      ambient: false,
+      type: 'Spot',
+      intens: 5,
+      pos: {
+        x: 0,
+        y: 0,
+        z: 0 
+      }
+    },
+  }
+
   // GUI
-  var gui = displayGUI(scene, directionalLight, params, objects)
+  var gui = displayGUI(scene, lights, params, objects)
   scene = gui.scene
-  directionalLight = gui.light
+  scene.add(gui.light)
   scene.add(gui.object)
 
-  // Camera position
+  // Camera position  
 
   camera.position.x = 10
   camera.position.y = 30
