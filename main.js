@@ -16,9 +16,11 @@ function getBox(h, w, d) {
   return mesh
 }
 
-function getSphere(size) {
+function getSphere(size, lightHelper = false) {
   var geometry = new THREE.SphereGeometry(size, 24, 24)
-  var material = new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
+  var material = lightHelper
+    ? new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
+    : new THREE.MeshPhongMaterial({ color: 'rgb(255, 255, 255)' })
   var mesh = new THREE.Mesh(geometry, material)
 
   return mesh
@@ -26,7 +28,7 @@ function getSphere(size) {
 
 function getCone(rad, h, radSeg) {
   var geometry = new THREE.ConeGeometry(rad, h, radSeg)
-  var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120' })
+  var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' })
   var mesh = new THREE.Mesh(geometry, material)
 
   return mesh
@@ -169,7 +171,6 @@ function getDirectionalLight(intensity) {
 
 function getAmbientLight(intensity) {
   var light = new THREE.AmbientLight('rgb(10, 30, 50)', intensity)
-  light.castShadow = true
 
   return light
 }
@@ -207,25 +208,24 @@ function update(renderer, scene, camera, controls) {
   })
 }
 
-function displayGUI(light, object) {
+function displayGUI(scene, light, params, objects) {
   var gui = new dat.GUI()
+  var object = objects[params.obj.geo]
 
   const objFolder = gui.addFolder('Object')
 
-  const params = {
-    obj: {
-      name: 'Cube',
-      geo: '',
-    },
-  }
   const objColor = {
     color: 0xffffff,
   }
 
-  objFolder.add(params.obj, 'name').name('Name')
   objFolder
-    .add(params.obj, 'geo', ['Cube', 'Sphere', 'Cone', 'Cylinder', 'Car'])
+    .add(params.obj, 'geo', ['Box', 'Sphere', 'Cone', 'Cylinder', 'Car'])
     .name('Geometry')
+    .onChange(() => {
+      scene.remove(object)
+      object = objects[params.obj.geo]
+      scene.add(object)
+    })
   objFolder
     .addColor(objColor, 'color')
     .name('Color')
@@ -262,15 +262,18 @@ function displayGUI(light, object) {
     })
 
   gui.open()
+  return { scene, light, object }
 }
 
 function init() {
   // Create scene, box, plane, camera, renderer
   var scene = new THREE.Scene()
-  var sphere = getSphere(2)
+  var sphere = getSphere(5)
   var plane = getPlane(100)
   var car = createCar()
-  var cone = getCone(20, 20, 20)
+  var cylinder = getCylinder(5, 5, 10, 360)
+  var cone = getCone(10, 10, 10)
+  var box = getBox(10, 10, 10)
   var camera = new THREE.PerspectiveCamera(
     45,
     window.innerWidth / window.innerHeight,
@@ -280,8 +283,8 @@ function init() {
   var renderer = new THREE.WebGLRenderer()
   var controls = new OrbitControls(camera, renderer.domElement)
   var enableFog = false
+  var lightHelper = getSphere(1, (lightHelper = true))
   var directionalLight = getDirectionalLight(1)
-  var box = getBox(20, 20, 20)
   var ambientLight = getAmbientLight(1)
 
   // Add white fog
@@ -290,25 +293,47 @@ function init() {
   }
 
   // Add box as child of plane, add plane to scene
-  scene.add(cone)
-  directionalLight.add(sphere)
+  directionalLight.add(lightHelper)
   scene.add(directionalLight)
+  scene.add(ambientLight)
   scene.add(plane)
 
   // Adjust properties
   plane.rotation.x = Math.PI / 2
   box.position.y = box.geometry.parameters.height / 2
+  cone.position.y = cone.geometry.parameters.height / 2
+  sphere.position.y = sphere.geometry.parameters.radius
+  cylinder.position.y = cylinder.geometry.parameters.height / 2
 
-  // Camera properties
+  // Light properties
+  directionalLight.position.y = 20
+  directionalLight.position.x = -10
+
+  // Config to change objects
+  var params = {
+    obj: {
+      geo: 'Box',
+    },
+  }
+  var objects = {
+    Box: box,
+    Sphere: sphere,
+    Cone: cone,
+    Cylinder: cylinder,
+    Car: car,
+  }
 
   // GUI
-  displayGUI(directionalLight, cone)
+  var gui = displayGUI(scene, directionalLight, params, objects)
+  scene = gui.scene
+  directionalLight = gui.light
+  scene.add(gui.object)
 
   // Camera position
 
   camera.position.x = 10
-  camera.position.y = 10
-  camera.position.z = 10
+  camera.position.y = 30
+  camera.position.z = 40
   camera.lookAt(new THREE.Vector3(0, 0, 0))
 
   // Render
