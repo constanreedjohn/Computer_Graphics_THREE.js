@@ -10,7 +10,7 @@ function getBox(h, w, d) {
   // var mesh = new THREE.Point(geometry, material);
   var mesh = new THREE.Mesh(geometry, material)
   // var mesh = new THREE.Line(geometry, material);
-
+  mesh.name = 'Box'
   mesh.castShadow = true
 
   return mesh
@@ -22,7 +22,7 @@ function getSphere(size, lightHelper = false) {
     ? new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
     : new THREE.MeshPhongMaterial({ color: 'rgb(255, 255, 255)' })
   var mesh = new THREE.Mesh(geometry, material)
-
+  if (!lightHelper) mesh.name = 'Sphere'
   return mesh
 }
 
@@ -30,7 +30,7 @@ function getCone(rad, h, radSeg) {
   var geometry = new THREE.ConeGeometry(rad, h, radSeg)
   var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' })
   var mesh = new THREE.Mesh(geometry, material)
-
+  mesh.name = 'Cone'
   return mesh
 }
 
@@ -38,7 +38,7 @@ function getCylinder(radTop, radBot, h, radSeg) {
   var geometry = new THREE.CylinderGeometry(radTop, radBot, h, radSeg)
   var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' })
   var mesh = new THREE.Mesh(geometry, material)
-
+  mesh.name = 'Cylinder'
   return mesh
 }
 
@@ -47,7 +47,7 @@ function createWheels() {
   const geometry = new THREE.BoxBufferGeometry(12, 12, 33)
   const material = new THREE.MeshLambertMaterial({ color: 0x333333 })
   const wheel = new THREE.Mesh(geometry, material)
-
+  wheel.name = 'Wheel'
   return wheel
 }
 
@@ -91,7 +91,7 @@ function createCar() {
   cabin.position.x = -6
   cabin.position.y = 25.5
   car.add(cabin)
-
+  car.name = 'Car'
   return car
 }
 
@@ -198,17 +198,51 @@ function getBoxGrid(amount, separationMultiplier) {
   return group
 }
 
-function update(renderer, scene, camera, controls) {
-  renderer.render(scene, camera)
-
-  controls.update()
-
+function update(renderer, scene, camera, controls, params) {
   requestAnimationFrame(function () {
-    update(renderer, scene, camera, controls)
+    update(renderer, scene, camera, controls, params)
   })
+
+  // Add animations
+  var animation = params.obj.anim.type
+  if (animation !== 'None') {
+    var obj = scene.getObjectByName(params.obj.geo)
+    var speed = params.obj.anim.speed
+    if (obj) {
+      switch (animation) {
+        case 'Rotate':
+          obj.rotation.x += speed
+          obj.rotation.z += speed
+          break
+        case 'Bounce':
+          if (!obj.animState) obj.animState = 'UP'
+          if (obj.scale.x <= 1) obj.animState = 'UP'
+          if (obj.scale.x >= 2) obj.animState = 'DOWN'
+          speed = obj.animState === 'UP' ? speed : -speed
+          obj.scale.x += speed
+          obj.scale.y += speed
+          obj.scale.z += speed
+          break
+        case 'RotateAndBounce':
+          obj.rotation.x += speed
+          obj.rotation.z += speed
+          if (!obj.animState) obj.animState = 'UP'
+          if (obj.scale.x <= 1) obj.animState = 'UP'
+          if (obj.scale.x >= 2) obj.animState = 'DOWN'
+          speed = obj.animState === 'UP' ? speed : -speed
+          obj.scale.x += speed
+          obj.scale.y += speed
+          obj.scale.z += speed
+          break
+      }
+    }
+  }
+
+  renderer.render(scene, camera)
+  controls.update()
 }
 
-function displayGUI(scene, lights, params, objects) {
+function displayGUI(scene, lights, params, objects, animations) {
   var gui = new dat.GUI()
   var object = objects[params.obj.geo]
   var lgt = lights[params.light.type]
@@ -221,6 +255,8 @@ function displayGUI(scene, lights, params, objects) {
   if (params.light.ambient) {
     scene.add(ambientLight)
   }
+
+  var animation = params.obj.anim.type
 
   // Object selection
   const objFolder = gui.addFolder('Object')
@@ -237,6 +273,23 @@ function displayGUI(scene, lights, params, objects) {
       object = objects[params.obj.geo]
       scene.add(object)
     })
+
+  // Object anim folder
+  var animFolder = objFolder.addFolder('Animation')
+
+  animFolder
+    .add(params.obj.anim, 'type', [
+      'None',
+      'Rotate',
+      'Bounce',
+      'RotateAndBounce',
+    ])
+    .name('Animation')
+    .onChange(() => {
+      if (params.obj.anim.type === 'None') animation = null
+      else animation = animations[params.obj.anim.type]
+    })
+  animFolder.add(params.obj.anim, 'speed', 0, 0.2, 0.005).name('Speed')
 
   // Object Color
   objFolder
@@ -370,7 +423,7 @@ function displayGUI(scene, lights, params, objects) {
     })
 
   gui.open()
-  return { scene, light: lights, object }
+  return { scene, light: lights, object, animation, params }
 }
 
 function init() {
@@ -436,6 +489,12 @@ function init() {
     Ambient: ambientLight,
   }
 
+  var animations = {
+    Rotate: 'Rotate',
+    Bounce: 'Bounce',
+    RotateAndBounce: 'RotateAndBounce',
+  }
+
   var params = {
     obj: {
       geo: 'Cone',
@@ -448,6 +507,10 @@ function init() {
         x: 0,
         y: 0,
         z: 0,
+      },
+      anim: {
+        type: 'None',
+        speed: 0.01,
       },
     },
     light: {
@@ -464,8 +527,9 @@ function init() {
   }
 
   // GUI
-  var gui = displayGUI(scene, lights, params, objects)
+  var gui = displayGUI(scene, lights, params, objects, animations)
   scene = gui.scene
+  params = gui.params
 
   // Camera position
 
@@ -481,7 +545,7 @@ function init() {
   document.getElementById('app').appendChild(renderer.domElement)
 
   // Recursively update scene
-  update(renderer, scene, camera, controls)
+  update(renderer, scene, camera, controls, params)
 
   return scene
 }
