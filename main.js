@@ -247,6 +247,7 @@ function displayGUI(scene, lights, params, objects, animations) {
   var object = objects[params.obj.geo]
   var lgt = lights[params.light.type]
   var lightHelper = getSphere(1, (lightHelper = true))
+  
   lgt.add(lightHelper)
   scene.add(object)
   scene.add(lgt)
@@ -274,6 +275,45 @@ function displayGUI(scene, lights, params, objects, animations) {
       scene.add(object)
     })
 
+  // Object material
+
+  objFolder
+  .add(params.obj, 'mat', ['Solid', 'Line', 'Point'])
+  .name('Material')
+  .onChange(() => {
+    switch (params.obj.mat) {
+      case 'Line':
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        object.material = new THREE.LineBasicMaterial({color: 'rgb(120, 120, 120)'})
+        var mesh = new THREE.Line(object.geometry, object.material)
+        scene.add(mesh)
+        break
+      case 'Solid':
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        object.material = new THREE.MeshPhongMaterial({color: 'rgb(120, 120, 120)'})
+        object.mesh = new THREE.Mesh(object.geometry, object.material)
+        scene.add(object)
+        break
+      case 'Point':
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        object.material = new THREE.PointsMaterial({color: 'rgb(120, 120, 120)'})
+        var mesh = new THREE.Points(object.geometry, object.material)
+        scene.add(object)
+        break
+    }
+  })
+
+  // Object Color
+  objFolder
+    .addColor(objColor, 'color')
+    .name('Color')
+    .onChange(() => {
+      object.material.color.set(objColor.color)
+    })
+    
   // Object anim folder
   var animFolder = objFolder.addFolder('Animation')
 
@@ -290,14 +330,6 @@ function displayGUI(scene, lights, params, objects, animations) {
       else animation = animations[params.obj.anim.type]
     })
   animFolder.add(params.obj.anim, 'speed', 0, 0.2, 0.005).name('Speed')
-
-  // Object Color
-  objFolder
-    .addColor(objColor, 'color')
-    .name('Color')
-    .onChange(() => {
-      object.material.color.set(objColor.color)
-    })
 
   // Object position
   const posFolder = objFolder.addFolder('Position')
@@ -401,7 +433,6 @@ function displayGUI(scene, lights, params, objects, animations) {
     })
 
   // Light Position
-
   const posLight = lightFolder.addFolder('Position')
   posLight
     .add(params.light.pos, 'x', -100, 100)
@@ -421,6 +452,32 @@ function displayGUI(scene, lights, params, objects, animations) {
     .onChange(() => {
       lgt.position.z = params.light.pos.z
     })
+
+  // Reset button
+  objFolder.add(params.obj, 'reset')
+  .name('Reset Object')
+  .onChange(() => {
+    if (params.obj.reset) {
+    scene.remove(object)
+    scene.add(object) 
+    } else {
+      scene.remove(object)
+      object = objects[params.obj.geo]
+      scene.add(object)
+    }
+  })
+  lightFolder.add(params.light, 'reset')
+  .name('Reset Lighting')
+  .onChange(() => {
+    if (params.light.reset) {
+    scene.remove(lgt)
+    scene.add(lgt) 
+    } else {
+      scene.remove(lgt)
+      lgt = lights[params.light.type]
+      scene.add(lgt)
+    }
+  })
 
   gui.open()
   return { scene, light: lights, object, animation, params }
@@ -498,6 +555,7 @@ function init() {
   var params = {
     obj: {
       geo: 'Cone',
+      mat: 'Solid',
       pos: {
         x: 0,
         y: 0,
@@ -512,6 +570,7 @@ function init() {
         type: 'None',
         speed: 0.01,
       },
+      reset: false,
     },
     light: {
       ambient: false,
@@ -523,6 +582,7 @@ function init() {
         y: 40,
         z: 0,
       },
+      reset: false,
     },
   }
 
