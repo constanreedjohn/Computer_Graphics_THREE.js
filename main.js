@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import * as dat from 'dat.gui'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
-function getBox(h, w, d) {
+function getBox(h, w, d, material=null) {
   var geometry = new THREE.BoxGeometry(h, w, d)
   // var material = new THREE.LineBasicMaterial({color: 'rgb(120, 120, 120)'});
   // var material = new THREE.PointsMaterial({color: 'rgb(120, 120, 120)'});
@@ -242,7 +242,7 @@ function update(renderer, scene, camera, controls, params) {
   controls.update()
 }
 
-function displayGUI(scene, lights, params, objects, animations) {
+function displayGUI(scene, lights, params, objects, animations, materials) {
   var gui = new dat.GUI()
   var object = objects[params.obj.geo]
   var lgt = lights[params.light.type]
@@ -272,36 +272,48 @@ function displayGUI(scene, lights, params, objects, animations) {
     .onChange(() => {
       scene.remove(object)
       object = objects[params.obj.geo]
+      let material = materials[params.obj.mat]
+      if (params.obj.mat === 'Line' || params.obj.mat === 'Points') {
+        let { name, rotation, position, scale } = object
+        if (params.obj.mat === 'Line')
+          object = new THREE.Line(object.geometry, material)
+        else
+          object = new THREE.Points(object.geometry, material)
+        object.name = name
+        object.rotation.x = rotation.x
+        object.rotation.y = rotation.y
+        object.rotation.z = rotation.z
+        object.position.x = position.x
+        object.position.y = position.y
+        object.position.z = position.z
+        object.scale.x = scale.x
+      }
       scene.add(object)
     })
 
   // Object material
 
   objFolder
-    .add(params.obj, 'mat', ['Basic', 'Standard', 'Phong', 'Lambert'])
+    .add(params.obj, 'mat', ['Basic', 'Standard', 'Phong', 'Lambert', 'Line', 'Points'])
     .name('Material')
     .onChange(() => {
-      switch (params.obj.mat) {
-        case 'Basic':
-          object.material = new THREE.MeshBasicMaterial({
-            color: 'rgb(120, 120, 120)',
-          })
-          break
-        case 'Phong':
-          object.material = new THREE.MeshPhongMaterial({
-            color: 'rgb(120, 120, 120)',
-          })
-          break
-        case 'Lambert':
-          object.material = new THREE.MeshLambertMaterial({
-            color: 'rgb(120, 120, 120)',
-          })
-          break
-        case 'Standard':
-          object.material = new THREE.MeshStandardMaterial({
-            color: 'rgb(120, 120, 120)',
-          })
-          break
+      if (params.obj.mat === 'Line' || params.obj.mat === 'Points') {
+        let { name, rotation, position, scale } = object
+        scene.remove(object)
+        if (params.obj.mat === 'Line')
+          object = new THREE.Line(object.geometry, materials[params.obj.mat])
+        else object = new THREE.Points(object.geometry, materials[params.obj.mat])
+        object.name = name
+        object.rotation.x = rotation.x
+        object.rotation.y = rotation.y
+        object.rotation.z = rotation.z
+        object.position.x = position.x
+        object.position.y = position.y
+        object.position.z = position.z
+        object.scale.x = scale.x
+        scene.add(object)
+      } else {
+        object.material = materials[params.obj.mat]
       }
     })
 
@@ -567,10 +579,19 @@ function init() {
     RotateAndBounce: 'RotateAndBounce',
   }
 
+  var materials = {
+    Basic: new THREE.MeshBasicMaterial({ color: 'rgb(120, 120, 120)' }),
+    Lambert: new THREE.MeshLambertMaterial({ color: 'rgb(120, 120, 120)' }),
+    Phong: new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' }),
+    Standard: new THREE.MeshStandardMaterial({ color: 'rgb(120, 120, 120)' }),
+    Line: new THREE.LineBasicMaterial({ color: 'rgb(120, 120, 120)' }),
+    Points: new THREE.PointsMaterial({ color: 'rgb(120, 120, 120)' }),
+  }
+
   var params = {
     obj: {
       geo: 'Cone',
-      mat: 'Solid',
+      mat: 'Phong',
       pos: {
         x: 0,
         y: 0,
@@ -600,7 +621,7 @@ function init() {
   }
 
   // GUI
-  var gui = displayGUI(scene, lights, params, objects, animations)
+  var gui = displayGUI(scene, lights, params, objects, animations, materials)
   scene = gui.scene
   params = gui.params
 
