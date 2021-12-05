@@ -427,7 +427,7 @@ function displayGUI(scene, lights, params, objects, animations) {
 }
 
 function init() {
-  // Create scene, box, plane, camera, renderer
+  // Initial state
   var scene = new THREE.Scene()
   var sphere = getSphere(5)
   var plane = getPlane(100)
