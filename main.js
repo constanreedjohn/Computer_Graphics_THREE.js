@@ -247,7 +247,7 @@ function displayGUI(scene, lights, params, objects, animations) {
   var object = objects[params.obj.geo]
   var lgt = lights[params.light.type]
   var lightHelper = getSphere(1, (lightHelper = true))
-  
+
   lgt.add(lightHelper)
   scene.add(object)
   scene.add(lgt)
@@ -278,33 +278,32 @@ function displayGUI(scene, lights, params, objects, animations) {
   // Object material
 
   objFolder
-  .add(params.obj, 'mat', ['Solid', 'Line', 'Point'])
-  .name('Material')
-  .onChange(() => {
-    switch (params.obj.mat) {
-      case 'Line':
-        scene.remove(object)
-        object = objects[params.obj.geo]
-        object.material = new THREE.LineBasicMaterial({color: 'rgb(120, 120, 120)'})
-        var mesh = new THREE.Line(object.geometry, object.material)
-        scene.add(mesh)
-        break
-      case 'Solid':
-        scene.remove(object)
-        object = objects[params.obj.geo]
-        object.material = new THREE.MeshPhongMaterial({color: 'rgb(120, 120, 120)'})
-        object.mesh = new THREE.Mesh(object.geometry, object.material)
-        scene.add(object)
-        break
-      case 'Point':
-        scene.remove(object)
-        object = objects[params.obj.geo]
-        object.material = new THREE.PointsMaterial({color: 'rgb(120, 120, 120)'})
-        var mesh = new THREE.Points(object.geometry, object.material)
-        scene.add(object)
-        break
-    }
-  })
+    .add(params.obj, 'mat', ['Basic', 'Standard', 'Phong', 'Lambert'])
+    .name('Material')
+    .onChange(() => {
+      switch (params.obj.mat) {
+        case 'Basic':
+          object.material = new THREE.MeshBasicMaterial({
+            color: 'rgb(120, 120, 120)',
+          })
+          break
+        case 'Phong':
+          object.material = new THREE.MeshPhongMaterial({
+            color: 'rgb(120, 120, 120)',
+          })
+          break
+        case 'Lambert':
+          object.material = new THREE.MeshLambertMaterial({
+            color: 'rgb(120, 120, 120)',
+          })
+          break
+        case 'Standard':
+          object.material = new THREE.MeshStandardMaterial({
+            color: 'rgb(120, 120, 120)',
+          })
+          break
+      }
+    })
 
   // Object Color
   objFolder
@@ -313,7 +312,7 @@ function displayGUI(scene, lights, params, objects, animations) {
     .onChange(() => {
       object.material.color.set(objColor.color)
     })
-    
+
   // Object anim folder
   var animFolder = objFolder.addFolder('Animation')
 
@@ -454,30 +453,46 @@ function displayGUI(scene, lights, params, objects, animations) {
     })
 
   // Reset button
-  objFolder.add(params.obj, 'reset')
-  .name('Reset Object')
-  .onChange(() => {
-    if (params.obj.reset) {
-    scene.remove(object)
-    scene.add(object) 
-    } else {
-      scene.remove(object)
-      object = objects[params.obj.geo]
-      scene.add(object)
-    }
-  })
-  lightFolder.add(params.light, 'reset')
-  .name('Reset Lighting')
-  .onChange(() => {
-    if (params.light.reset) {
-    scene.remove(lgt)
-    scene.add(lgt) 
-    } else {
-      scene.remove(lgt)
-      lgt = lights[params.light.type]
-      scene.add(lgt)
-    }
-  })
+  objFolder
+    .add(
+      {
+        reset: () => {
+          console.log('reset')
+        },
+      },
+      'reset'
+    )
+    .name('Reset Object')
+    .onChange(() => {
+      if (params.obj.reset) {
+        scene.remove(object)
+        scene.add(object)
+      } else {
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        scene.add(object)
+      }
+    })
+  lightFolder
+    .add(
+      {
+        reset: () => {
+          console.log('Reset')
+        },
+      },
+      'reset'
+    )
+    .name('Reset Lighting')
+    .onChange(() => {
+      if (params.light.reset) {
+        scene.remove(lgt)
+        scene.add(lgt)
+      } else {
+        scene.remove(lgt)
+        lgt = lights[params.light.type]
+        scene.add(lgt)
+      }
+    })
 
   gui.open()
   return { scene, light: lights, object, animation, params }
@@ -570,7 +585,6 @@ function init() {
         type: 'None',
         speed: 0.01,
       },
-      reset: false,
     },
     light: {
       ambient: false,
@@ -582,7 +596,6 @@ function init() {
         y: 40,
         z: 0,
       },
-      reset: false,
     },
   }
 
