@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 import * as dat from 'dat.gui'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import { BoxHelper } from 'three'
 
-function getBox(h, w, d, material=null) {
+function getBox(h, w, d, material = null) {
   var geometry = new THREE.BoxGeometry(h, w, d)
   // var material = new THREE.LineBasicMaterial({color: 'rgb(120, 120, 120)'});
   // var material = new THREE.PointsMaterial({color: 'rgb(120, 120, 120)'});
@@ -267,7 +268,13 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
   }
 
   objFolder
-    .add(params.obj, 'geo', ['Box', 'Sphere', 'Cone', 'Cylinder', 'Car'])
+    .add(params.obj, 'geo', [
+      'Box', 
+      'Sphere', 
+      'Cone', 
+      'Cylinder', 
+      'Car'
+    ])
     .name('Geometry')
     .onChange(() => {
       scene.remove(object)
@@ -277,8 +284,7 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
         let { name, rotation, position, scale } = object
         if (params.obj.mat === 'Line')
           object = new THREE.Line(object.geometry, material)
-        else
-          object = new THREE.Points(object.geometry, material)
+        else object = new THREE.Points(object.geometry, material)
         object.name = name
         object.rotation.x = rotation.x
         object.rotation.y = rotation.y
@@ -292,9 +298,15 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
     })
 
   // Object material
-
   objFolder
-    .add(params.obj, 'mat', ['Basic', 'Standard', 'Phong', 'Lambert', 'Line', 'Points'])
+    .add(params.obj, 'mat', [
+      'Basic',
+      'Standard',
+      'Phong',
+      'Lambert',
+      'Line',
+      'Points',
+    ])
     .name('Material')
     .onChange(() => {
       if (params.obj.mat === 'Line' || params.obj.mat === 'Points') {
@@ -302,7 +314,8 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
         scene.remove(object)
         if (params.obj.mat === 'Line')
           object = new THREE.Line(object.geometry, materials[params.obj.mat])
-        else object = new THREE.Points(object.geometry, materials[params.obj.mat])
+        else
+          object = new THREE.Points(object.geometry, materials[params.obj.mat])
         object.name = name
         object.rotation.x = rotation.x
         object.rotation.y = rotation.y
@@ -324,6 +337,22 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
     .onChange(() => {
       object.material.color.set(objColor.color)
     })
+
+  // Object helper
+  var boxhelper = new THREE.BoxHelper(object, 0xffff00)
+  objFolder.add(params.obj, 'helper')
+    .name("Toggle box helper")
+    .onChange(() => {
+    if (params.obj.helper) {
+      scene.remove(object)
+      object = objects[params.obj.geo]
+      boxhelper = boxhelper.setFromObject(object)
+      scene.add(object)
+      scene.add(boxhelper)
+    } else {
+      scene.remove(boxhelper)
+    }
+  })
 
   // Object anim folder
   var animFolder = objFolder.addFolder('Animation')
@@ -532,6 +561,7 @@ function init() {
   var spotLight = getSpotLight(1)
   var pointLight = getPointLight(1)
   var directionalLight = getDirectionalLight(1)
+  const axesHelper = new THREE.AxesHelper(9000)
 
   // Add white fog
   if (enableFog) {
@@ -539,8 +569,8 @@ function init() {
   }
 
   // Add stuff to scene
-  // scene.add(ambientLight)
   scene.add(plane)
+  scene.add(axesHelper)
 
   // Adjust properties
   plane.rotation.x = Math.PI / 2
@@ -590,7 +620,7 @@ function init() {
 
   var params = {
     obj: {
-      geo: 'Cone',
+      geo: 'Box',
       mat: 'Phong',
       pos: {
         x: 0,
@@ -606,6 +636,7 @@ function init() {
         type: 'None',
         speed: 0.01,
       },
+      helper: false,
     },
     light: {
       ambient: false,
@@ -615,6 +646,11 @@ function init() {
       pos: {
         x: 20,
         y: 40,
+        z: 0,
+      },
+      rot: {
+        x: 0,
+        y: 0,
         z: 0,
       },
     },
