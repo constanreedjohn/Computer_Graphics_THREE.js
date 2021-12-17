@@ -23,6 +23,7 @@ function getSphere(size, lightHelper = false) {
     ? new THREE.MeshBasicMaterial({ color: 'rgb(255, 255, 255)' })
     : new THREE.MeshPhongMaterial({ color: 'rgb(255, 255, 255)' })
   var mesh = new THREE.Mesh(geometry, material)
+  mesh.castShadow = true
   if (!lightHelper) mesh.name = 'Sphere'
   return mesh
 }
@@ -32,6 +33,7 @@ function getCone(rad, h, radSeg) {
   var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' })
   var mesh = new THREE.Mesh(geometry, material)
   mesh.name = 'Cone'
+  mesh.castShadow = true
   return mesh
 }
 
@@ -40,6 +42,7 @@ function getCylinder(radTop, radBot, h, radSeg) {
   var material = new THREE.MeshPhongMaterial({ color: 'rgb(120, 120, 120)' })
   var mesh = new THREE.Mesh(geometry, material)
   mesh.name = 'Cylinder'
+  mesh.castShadow = true
   return mesh
 }
 
@@ -248,10 +251,15 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
   var object = objects[params.obj.geo]
   var lgt = lights[params.light.type]
   var lightHelper = getSphere(1, (lightHelper = true))
+  var plane = getPlane(100)
 
   lgt.add(lightHelper)
+  scene.add(plane)
   scene.add(object)
   scene.add(lgt)
+
+  plane.name = 'Plane'
+  plane.rotation.x = Math.PI / 2
 
   var ambientLight = lights.Ambient
   if (params.light.ambient) {
@@ -260,6 +268,65 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
 
   var animation = params.obj.anim.type
 
+  // Plane Properties
+  const planeFolder = gui.addFolder('Plane')
+
+  const planeColor = {
+    color: 0xffffff,
+  }
+
+  // Plane Color
+  planeFolder
+    .addColor(planeColor, 'color')
+    .name('Color')
+    .onChange(() => {
+      plane.material.color.set(planeColor.color)
+    })
+
+  // Plane position
+  const posPlane = planeFolder.addFolder('Position')
+
+  posPlane
+    .add(params.plane.pos, 'x', -100, 100)
+    .name('X-axis')
+    .onChange(() => {
+      plane.position.x = params.plane.pos.x
+    })
+  posPlane
+    .add(params.plane.pos, 'y', -100, 100)
+    .name('Y-axis')
+    .onChange(() => {
+      plane.position.y = params.plane.pos.y
+    })
+  posPlane
+    .add(params.plane.pos, 'z', -100, 100)
+    .name('Z-axis')
+    .onChange(() => {
+      plane.position.z = params.plane.pos.z
+    })
+
+  // Plane Rotation
+  const rotPlane = planeFolder.addFolder('Rotation')
+
+  rotPlane
+    .add(params.plane.rot, 'x', -Math.PI, Math.PI)
+    .name('X-axis')
+    .onChange(() => {
+      plane.rotation.x = params.plane.rot.x
+    })
+  rotPlane
+    .add(params.plane.rot, 'y', -Math.PI, Math.PI)
+    .name('Y-axis')
+    .onChange(() => {
+      plane.rotation.y = params.plane.rot.y
+    })
+  rotPlane
+    .add(params.plane.rot, 'z', -Math.PI, Math.PI)
+    .name('Z-axis')
+    .onChange(() => {
+      plane.rotation.z = params.plane.rot.z
+    })
+    
   // Object selection
   const objFolder = gui.addFolder('Object')
 
@@ -353,6 +420,28 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
       scene.remove(boxhelper)
     }
   })
+
+  // Object Texture
+  var loader = new THREE.TextureLoader()
+  let texture = object.map
+  objFolder.add(params.obj, 'texture')
+    .name("Toggle texture")
+    .onChange(() => {
+      if (params.obj.texture) {
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        texture = object.map
+        texture = loader.load("D:\Github\Computer_Graphics_THREE.js\vintage-retro-old-wood-texture-2866500.jpg")
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(1.5, 1.5)
+        scene.add(object)
+      } else {
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        scene.add(object)
+      }
+    })
 
   // Object anim folder
   var animFolder = objFolder.addFolder('Animation')
@@ -569,11 +658,9 @@ function init() {
   }
 
   // Add stuff to scene
-  scene.add(plane)
   scene.add(axesHelper)
 
   // Adjust properties
-  plane.rotation.x = Math.PI / 2
   box.position.y = box.geometry.parameters.height / 2
   cone.position.y = cone.geometry.parameters.height / 2
   sphere.position.y = sphere.geometry.parameters.radius
@@ -619,9 +706,22 @@ function init() {
   }
 
   var params = {
+    plane: {
+      pos: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      rot: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+    },
     obj: {
       geo: 'Box',
       mat: 'Phong',
+      texture: false,
       pos: {
         x: 0,
         y: 0,
@@ -641,7 +741,7 @@ function init() {
     light: {
       ambient: false,
       ambientIntens: 3,
-      type: 'Spot',
+      type: 'Directional',
       intens: 5,
       pos: {
         x: 20,
