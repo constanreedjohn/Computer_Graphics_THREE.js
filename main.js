@@ -252,12 +252,15 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
   var lgt = lights[params.light.type]
   var lightHelper = getSphere(1, (lightHelper = true))
   var plane = getPlane(100)
-  let texture = new THREE.TextureLoader().load(
-    'vintage-retro-old-wood-texture-2866500.jpg'
-  )
-  texture.wrapS = THREE.RepeatWrapping
-  texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(1.5, 1.5)
+  if (!params.obj.textureImage) {
+    let texture = new THREE.TextureLoader().load(
+      'vintage-retro-old-wood-texture-2866500.jpg'
+    )
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    texture.repeat.set(1.5, 1.5)
+    params.obj.textureImage = texture
+  }
 
   lgt.add(lightHelper)
   scene.add(plane)
@@ -361,9 +364,9 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
         object.position.z = position.z
         object.scale.x = scale.x
       }
-      
+
       if (params.obj.texture) {
-        object.material.map = texture
+        object.material.map = params.obj.textureImage
         object.material.needsUpdate = true
       }
 
@@ -430,12 +433,31 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
 
   // Object Texture
   objFolder
+    .add(
+      {
+        choose: () => {
+          let ele = document.getElementById('texture_input')
+          ele.click()
+        },
+      },
+      'choose'
+    )
+    .name('Choose texture')
+
+  objFolder
     .add(params.obj, 'texture')
     .name('Toggle texture')
     .onChange(() => {
+      let ele = document.getElementById('texture_input')
+      if (ele.files.length === 1) {
+        params.obj.textureImage = new THREE.TextureLoader().load(
+          URL.createObjectURL(ele.files[0])
+        )
+      }
+
       let obj = object
       if (params.obj.texture) {
-        obj.material.map = texture
+        obj.material.map = params.obj.textureImage
       } else {
         obj.material.map = null
       }
@@ -721,6 +743,7 @@ function init() {
       geo: 'Box',
       mat: 'Phong',
       texture: false,
+      textureImage: null,
       pos: {
         x: 0,
         y: 0,
@@ -772,6 +795,11 @@ function init() {
   renderer.setClearColor('rgb(150, 150, 150)') // '#ffffff', 'rgb(255, 255, 255)'
   renderer.shadowMap.enabled = true
   document.getElementById('app').appendChild(renderer.domElement)
+  document.getElementById('texture_input').onchange = function() {
+    if (this.files.length === 1) {
+      params.obj.textureImage = document.getElementById('texture_input').files[0]
+    }
+  }
 
   // Recursively update scene
   update(renderer, scene, camera, controls, params)
