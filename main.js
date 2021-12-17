@@ -252,6 +252,12 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
   var lgt = lights[params.light.type]
   var lightHelper = getSphere(1, (lightHelper = true))
   var plane = getPlane(100)
+  let texture = new THREE.TextureLoader().load(
+    'vintage-retro-old-wood-texture-2866500.jpg'
+  )
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(1.5, 1.5)
 
   lgt.add(lightHelper)
   scene.add(plane)
@@ -326,7 +332,7 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
     .onChange(() => {
       plane.rotation.z = params.plane.rot.z
     })
-    
+
   // Object selection
   const objFolder = gui.addFolder('Object')
 
@@ -335,13 +341,7 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
   }
 
   objFolder
-    .add(params.obj, 'geo', [
-      'Box', 
-      'Sphere', 
-      'Cone', 
-      'Cylinder', 
-      'Car'
-    ])
+    .add(params.obj, 'geo', ['Box', 'Sphere', 'Cone', 'Cylinder', 'Car'])
     .name('Geometry')
     .onChange(() => {
       scene.remove(object)
@@ -361,6 +361,12 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
         object.position.z = position.z
         object.scale.x = scale.x
       }
+      
+      if (params.obj.texture) {
+        object.material.map = texture
+        object.material.needsUpdate = true
+      }
+
       scene.add(object)
     })
 
@@ -407,40 +413,33 @@ function displayGUI(scene, lights, params, objects, animations, materials) {
 
   // Object helper
   var boxhelper = new THREE.BoxHelper(object, 0xffff00)
-  objFolder.add(params.obj, 'helper')
-    .name("Toggle box helper")
+  objFolder
+    .add(params.obj, 'helper')
+    .name('Toggle box helper')
     .onChange(() => {
-    if (params.obj.helper) {
-      scene.remove(object)
-      object = objects[params.obj.geo]
-      boxhelper = boxhelper.setFromObject(object)
-      scene.add(object)
-      scene.add(boxhelper)
-    } else {
-      scene.remove(boxhelper)
-    }
-  })
+      if (params.obj.helper) {
+        scene.remove(object)
+        object = objects[params.obj.geo]
+        boxhelper = boxhelper.setFromObject(object)
+        scene.add(object)
+        scene.add(boxhelper)
+      } else {
+        scene.remove(boxhelper)
+      }
+    })
 
   // Object Texture
-  var loader = new THREE.TextureLoader()
-  let texture = object.map
-  objFolder.add(params.obj, 'texture')
-    .name("Toggle texture")
+  objFolder
+    .add(params.obj, 'texture')
+    .name('Toggle texture')
     .onChange(() => {
+      let obj = object
       if (params.obj.texture) {
-        scene.remove(object)
-        object = objects[params.obj.geo]
-        texture = object.map
-        texture = loader.load("D:\Github\Computer_Graphics_THREE.js\vintage-retro-old-wood-texture-2866500.jpg")
-        texture.wrapS = THREE.RepeatWrapping
-        texture.wrapT = THREE.RepeatWrapping
-        texture.repeat.set(1.5, 1.5)
-        scene.add(object)
+        obj.material.map = texture
       } else {
-        scene.remove(object)
-        object = objects[params.obj.geo]
-        scene.add(object)
+        obj.material.map = null
       }
+      obj.material.needsUpdate = true
     })
 
   // Object anim folder
